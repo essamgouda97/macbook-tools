@@ -4,122 +4,108 @@ A collection of productivity tools for macOS, built with Swift and SwiftUI.
 
 ## Tools
 
-### FrancoTranslator
+### 🔤 FrancoTranslator
 
-Triple-click anywhere to open a floating translator that converts Egyptian Franco-Arabic (Arabizi) to Egyptian Arabic using AI.
+Instantly translate Egyptian Franco-Arabic (Arabizi) to Arabic script.
+
+**Trigger:** `⌘ + double-click` anywhere, or customizable keyboard shortcut
 
 **Features:**
-- System-wide triple-click activation
-- Floating panel at cursor position
-- Real-time translation via OpenAI GPT-4
-- Conversation history
-- Secure API key storage in Keychain
-- Multiple ways to dismiss (Esc, click outside, Cmd+W, close button)
-
-## Requirements
-
-- macOS 14.0 (Sonoma) or later
-- OpenAI API key
-- Accessibility permission (for global event monitoring)
+- Floating panel appears at cursor
+- Type Franco → get Arabic → auto-copied to clipboard
+- Press `Esc` to close (or click outside, `Cmd+W`)
+- Customizable keyboard shortcut in Settings
 
 ## Installation
 
-### From Source
+### Quick Install
 
 ```bash
-git clone https://github.com/yourusername/macbook_tools.git
+git clone https://github.com/egouda/macbook_tools.git
 cd macbook_tools
-swift build -c release
+make install
 ```
 
-The built app will be in `.build/release/FrancoTranslator`
+This builds and copies `FrancoTranslator.app` to `/Applications`.
 
-## Configuration
+### Start at Login
 
-### OpenAI API Key
-
-1. Get an API key from [OpenAI Platform](https://platform.openai.com/api-keys)
-2. Click the menu bar icon → Settings
-3. Enter your API key (stored securely in macOS Keychain)
-
-### Accessibility Permission
-
-The app requires Accessibility permission to detect triple-clicks system-wide:
-
-1. System Settings → Privacy & Security → Accessibility
-2. Enable FrancoTranslator
+1. Open **System Settings → General → Login Items**
+2. Click **+** under "Open at Login"
+3. Select **FrancoTranslator** from Applications
 
 ## Usage
 
-1. **Activate**: Triple-click (three rapid clicks) anywhere on screen
-2. **Type**: Enter Franco-Arabic text in the floating panel
-3. **Send**: Press Enter or click the send button
-4. **View**: Arabic translation appears below
-5. **Close**: Press Esc, click outside, or press Cmd+W
+1. **Open:** Hold `⌘` and double-click anywhere
+2. **Type:** Enter Franco-Arabic text (e.g., `ezayak`, `el7amdulellah`)
+3. **Translate:** Press `Enter`
+4. **Done:** Arabic appears and is auto-copied to clipboard
+5. **Close:** Press `Esc`
 
 ### Franco-Arabic Reference
 
 | Franco | Arabic | Sound |
 |--------|--------|-------|
-| 2 | ء | glottal stop (hamza) |
+| 2 | ء | glottal stop |
 | 3 | ع | ain |
 | 5 / kh | خ | kh |
-| 7 | ح | h (emphatic) |
+| 7 | ح | emphatic h |
 | 8 / gh | غ | gh |
 | 9 / q | ق | q |
 
-### Examples
+## Requirements
 
-| Franco Input | Arabic Output |
-|--------------|---------------|
-| ezayak | إزيك |
-| ana 3ayez akol | أنا عايز آكل |
-| el7amdulellah | الحمد لله |
-| ma3lesh | معلش |
-| 2ahwa | قهوة |
+- macOS 14.0+ (Sonoma)
+- OpenAI API key (set `OPENAI_API_KEY` env var or enter in Settings)
+- Accessibility permission (for global hotkeys)
+
+## Configuration
+
+### OpenAI API Key
+
+Option 1: Environment variable (recommended)
+```bash
+# Add to ~/.zshrc
+export OPENAI_API_KEY="sk-..."
+```
+
+Option 2: Via Settings
+- Click menu bar icon → Settings → Enter API key
+
+### Keyboard Shortcut
+
+Default backup shortcut: `⌃⌥T` (Ctrl+Option+T)
+
+Customize in Settings (menu bar → Settings).
 
 ## Development
 
-### Project Structure
-
-```
-Sources/
-├── MacToolsCore/     # Shared utilities across all tools
-│   ├── Accessibility/
-│   ├── EventMonitoring/
-│   ├── UI/
-│   └── Security/
-└── FrancoTranslator/ # Franco translator app
-    ├── Views/
-    ├── ViewModels/
-    └── Services/
-```
-
-### Building
-
 ```bash
-# Debug build
-swift build
-
-# Release build
-swift build -c release
-
-# Run tests
-swift test
+make help          # Show all commands
+make build         # Debug build
+make run           # Build and run
+make release       # Build .app bundle
+make install       # Install to /Applications
+make clean         # Clean build
 ```
 
 ### Adding New Tools
 
-1. Create new directory under `Sources/YourToolName/`
-2. Add executable target to `Package.swift`
-3. Import `MacToolsCore` for shared utilities
+See [AGENTS.md](AGENTS.md) for guidelines on adding new tools to this repo.
 
-## Privacy
+## Project Structure
 
-- API keys are stored locally in macOS Keychain
-- Text is sent to OpenAI for translation (see [OpenAI privacy policy](https://openai.com/privacy))
-- No data is collected or stored by this app beyond your local machine
+```
+macbook_tools/
+├── Makefile                 # Build commands
+├── Package.swift            # SPM config
+├── Sources/
+│   ├── MacToolsCore/        # Shared library
+│   └── FrancoTranslator/    # First tool
+├── Scripts/                 # Build scripts
+└── build/                   # Output .app bundles
+```
 
 ## License
 
-MIT License
+MIT

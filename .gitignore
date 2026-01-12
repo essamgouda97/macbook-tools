@@ -58,3 +58,6 @@ credentials.json
 *.dSYM.zip
 *.app.zip
 *.dmg
+
+# Local build output
+build/
