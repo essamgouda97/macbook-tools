@@ -8,12 +8,26 @@ struct ChatBoxView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Header
+            // Header with tool selector
             HStack {
-                Text("Franco → Arabic")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.secondary)
+                // Tool picker
+                Picker("", selection: $viewModel.selectedTool) {
+                    ForEach(Tool.allTools) { tool in
+                        Label(tool.name, systemImage: tool.icon)
+                            .tag(tool)
+                    }
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+                .fixedSize()
+
                 Spacer()
+
+                // Click hint
+                Text("⌘+\(viewModel.selectedTool.clickCount)×click")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary.opacity(0.7))
+
                 Button(action: { NSApp.keyWindow?.close() }) {
                     Image(systemName: "xmark")
                         .foregroundColor(.secondary)
@@ -23,8 +37,8 @@ struct ChatBoxView: View {
                 .keyboardShortcut(.escape, modifiers: [])
             }
 
-            // Input field
-            TextField("Type Franco...", text: $inputText)
+            // Input field with dynamic placeholder
+            TextField(viewModel.selectedTool.placeholder, text: $inputText)
                 .textFieldStyle(.plain)
                 .font(.system(size: 15))
                 .focused($isInputFocused)
@@ -34,7 +48,7 @@ struct ChatBoxView: View {
                         .fill(Color(nsColor: .textBackgroundColor))
                 )
                 .onSubmit {
-                    translate()
+                    process()
                 }
 
             // Output area
@@ -42,21 +56,21 @@ struct ChatBoxView: View {
                 HStack(spacing: 8) {
                     ProgressView()
                         .scaleEffect(0.7)
-                    Text("Translating...")
+                    Text("Processing...")
                         .font(.system(size: 13))
                         .foregroundColor(.secondary)
                 }
                 .padding(.vertical, 4)
-            } else if let output = viewModel.lastTranslation {
+            } else if let output = viewModel.lastOutput {
                 VStack(alignment: .trailing, spacing: 8) {
-                    // Arabic output - RTL, full width, scrollable if needed
+                    // Output - RTL for Arabic, LTR for others
                     ScrollView {
                         Text(output)
-                            .font(.system(size: 20))
-                            .multilineTextAlignment(.trailing)
-                            .environment(\.layoutDirection, .rightToLeft)
+                            .font(.system(size: viewModel.selectedTool.id == "franco" ? 20 : 14, design: viewModel.selectedTool.id == "terminal" ? .monospaced : .default))
+                            .multilineTextAlignment(viewModel.selectedTool.id == "franco" ? .trailing : .leading)
+                            .environment(\.layoutDirection, viewModel.selectedTool.id == "franco" ? .rightToLeft : .leftToRight)
                             .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .trailing)
+                            .frame(maxWidth: .infinity, alignment: viewModel.selectedTool.id == "franco" ? .trailing : .leading)
                     }
                     .frame(maxHeight: 150)
 
@@ -96,12 +110,12 @@ struct ChatBoxView: View {
             Spacer(minLength: 0)
 
             // Hint
-            Text("⏎ translate • ⎋ close • ⌘+dbl-click")
+            Text("⏎ run • ⎋ close • ⌘+2/3/4×click")
                 .font(.system(size: 10))
                 .foregroundColor(.secondary.opacity(0.6))
         }
         .padding(14)
-        .frame(width: 380)
+        .frame(width: 400)
         .fixedSize(horizontal: false, vertical: true)
         .background(
             RoundedRectangle(cornerRadius: 10)
@@ -109,14 +123,15 @@ struct ChatBoxView: View {
         )
         .onAppear {
             isInputFocused = true
+            inputText = ""
             viewModel.reset()
         }
     }
 
-    private func translate() {
+    private func process() {
         guard !inputText.isEmpty, !viewModel.isLoading else { return }
         Task {
-            await viewModel.translate(text: inputText)
+            await viewModel.process(input: inputText)
         }
     }
 

@@ -4,33 +4,39 @@ import AppKit
 
 @MainActor
 final class TranslationViewModel: ObservableObject {
-    @Published var lastTranslation: String?
+    @Published var selectedTool: Tool {
+        didSet {
+            ToolStorage.shared.selectedTool = selectedTool
+        }
+    }
+    @Published var lastOutput: String?
     @Published var isLoading = false
     @Published var error: String?
     @Published var justCopied = false
 
-    private let translationService: TranslationService
+    private let llmService: LLMService
 
-    init(translationService: TranslationService = TranslationService()) {
-        self.translationService = translationService
+    init(llmService: LLMService = LLMService()) {
+        self.llmService = llmService
+        self.selectedTool = ToolStorage.shared.selectedTool
     }
 
-    func translate(text: String) async {
+    func process(input: String) async {
         isLoading = true
         error = nil
-        lastTranslation = nil
+        lastOutput = nil
         justCopied = false
 
         do {
-            let translation = try await translationService.translateFrancoToArabic(text: text)
-            lastTranslation = translation
+            let output = try await llmService.process(input: input, tool: selectedTool)
+            lastOutput = output
 
             // Auto-copy to clipboard
             NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(translation, forType: .string)
+            NSPasteboard.general.setString(output, forType: .string)
             showCopied()
 
-        } catch let err as TranslationError {
+        } catch let err as LLMError {
             error = err.userMessage
         } catch {
             self.error = error.localizedDescription
@@ -48,8 +54,20 @@ final class TranslationViewModel: ObservableObject {
     }
 
     func reset() {
-        lastTranslation = nil
+        lastOutput = nil
         error = nil
         justCopied = false
+    }
+
+    func selectTool(_ tool: Tool) {
+        selectedTool = tool
+        reset()
+    }
+
+    func selectTool(byClickCount clickCount: Int) {
+        if let tool = Tool.tool(forClickCount: clickCount) {
+            selectedTool = tool
+            reset()
+        }
     }
 }

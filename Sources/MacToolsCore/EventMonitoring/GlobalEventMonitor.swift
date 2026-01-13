@@ -37,14 +37,16 @@ public final class GlobalEventMonitor {
     }
 }
 
-/// Monitors for Cmd + double-click (default trigger)
-public final class CmdDoubleClickMonitor {
+/// Monitors for Cmd + N clicks (2, 3, or 4 clicks for different tools)
+public final class CmdClickMonitor {
     private var globalMonitor: Any?
     private var localMonitor: Any?
-    private let onTrigger: (CGPoint) -> Void
+    private let onTrigger: (CGPoint, Int) -> Void  // (location, clickCount)
     private var triggered = false
+    private var pendingClickCount = 0
+    private var clickTimer: DispatchWorkItem?
 
-    public init(onTrigger: @escaping (CGPoint) -> Void) {
+    public init(onTrigger: @escaping (CGPoint, Int) -> Void) {
         self.onTrigger = onTrigger
     }
 
@@ -62,25 +64,42 @@ public final class CmdDoubleClickMonitor {
     }
 
     private func handleClick(_ event: NSEvent) {
-        // Check for Cmd + double-click
-        guard event.modifierFlags.contains(.command),
-              event.clickCount == 2,
-              !triggered else { return }
+        // Must have Cmd held down
+        guard event.modifierFlags.contains(.command), !triggered else { return }
 
-        triggered = true
+        let clickCount = event.clickCount
+
+        // Cancel any pending timer
+        clickTimer?.cancel()
+
+        // Track the click count
+        pendingClickCount = clickCount
         let location = NSEvent.mouseLocation
 
-        DispatchQueue.main.async { [weak self] in
-            self?.onTrigger(location)
+        // Wait a short time to see if more clicks are coming
+        // This allows detecting 3 or 4 clicks
+        let timer = DispatchWorkItem { [weak self] in
+            guard let self = self, self.pendingClickCount >= 2 else { return }
+
+            self.triggered = true
+
+            DispatchQueue.main.async {
+                self.onTrigger(location, self.pendingClickCount)
+            }
+
+            // Reset after debounce
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                self.triggered = false
+                self.pendingClickCount = 0
+            }
         }
 
-        // Debounce
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-            self?.triggered = false
-        }
+        clickTimer = timer
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: timer)
     }
 
     public func stop() {
+        clickTimer?.cancel()
         if let monitor = globalMonitor {
             NSEvent.removeMonitor(monitor)
             globalMonitor = nil
@@ -89,6 +108,33 @@ public final class CmdDoubleClickMonitor {
             NSEvent.removeMonitor(monitor)
             localMonitor = nil
         }
+    }
+
+    deinit {
+        stop()
+    }
+}
+
+/// Legacy: Monitors for Cmd + double-click only (for backward compatibility)
+public final class CmdDoubleClickMonitor {
+    private var clickMonitor: CmdClickMonitor?
+    private let onTrigger: (CGPoint) -> Void
+
+    public init(onTrigger: @escaping (CGPoint) -> Void) {
+        self.onTrigger = onTrigger
+    }
+
+    public func start() {
+        clickMonitor = CmdClickMonitor { [weak self] location, clickCount in
+            if clickCount == 2 {
+                self?.onTrigger(location)
+            }
+        }
+        clickMonitor?.start()
+    }
+
+    public func stop() {
+        clickMonitor?.stop()
     }
 
     deinit {

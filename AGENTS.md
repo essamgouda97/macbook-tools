@@ -169,16 +169,52 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
 ---
 
-## Build Commands
+## Development Workflow
+
+**For testing code changes:**
+```bash
+make dev           # Stop app, build, run from source (Ctrl+C to stop)
+make restore       # Stop dev version, restart installed app
+make status        # Show which version is running
+```
+
+**Typical workflow:**
+```bash
+# 1. Make code changes
+# 2. Test them
+make dev           # Runs from source, see changes immediately
+
+# 3. When done testing, either:
+make restore       # Go back to installed version (discard changes from install)
+# OR
+make install       # Ship changes to /Applications
+make restore       # Restart the newly installed version
+```
+
+**Quick reference:**
+```bash
+make dev           # Test changes (runs from source)
+make stop          # Stop any running version
+make restore       # Restart installed app
+make reinstall     # Stop → rebuild → install → restart (all in one)
+make status        # Which version is running?
+```
+
+## All Build Commands
 
 ```bash
 make help          # Show all commands
 make build         # Debug build
 make release       # Build .app bundle
 make install       # Install to /Applications
-make run           # Build and run
+make run           # Build and run (blocking)
+make dev           # Build and run (stops existing, shows restore hint)
+make stop          # Stop the app
+make restore       # Restart installed app
+make reinstall     # Full cycle: stop → install → restore
 make clean         # Clean build artifacts
 make zip           # Create release zip
+make status        # Show running version
 ```
 
 ---
@@ -214,20 +250,6 @@ if panel.isVisible {
 ```
 
 ---
-
-## Testing Locally
-
-```bash
-# Run in debug mode
-make run
-
-# Or directly
-swift run MyTool
-
-# Build .app and open
-make release
-open build/MyTool.app
-```
 
 ## Releasing
 
