@@ -3,7 +3,7 @@
 # Configuration
 APP_NAME = FrancoTranslator
 BUNDLE_ID = com.macbooktools.francotranslator
-VERSION = 1.1.0
+VERSION = 1.2.0
 BUILD_DIR = build
 INSTALL_DIR = /Applications
 
