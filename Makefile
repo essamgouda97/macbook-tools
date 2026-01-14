@@ -33,7 +33,7 @@ help: ## Show this help
 	@echo "$(YELLOW)Workflows:$(NC)"
 	@echo "  Development:  make dev → test → make restore"
 	@echo "  Ship changes: make reinstall"
-	@echo "  New release:  make publish → make tag v=1.0.0"
+	@echo "  New release:  make github-release v=1.2.0  (does everything!)"
 	@echo ""
 
 all: build ## Build debug version
@@ -176,25 +176,54 @@ publish: zip ## Create release zip and show next steps
 	@echo "  5. Add release notes and publish"
 	@echo ""
 
-bump-version: ## Show how to bump version
-	@echo "$(YELLOW)To bump version:$(NC)"
-	@echo "  1. Edit VERSION in Makefile (currently $(VERSION))"
-	@echo "  2. Edit version in Resources/Info.plist"
-	@echo "  3. Run: make publish"
-	@echo ""
-
-github-release: zip ## Create GitHub release with zip (usage: make github-release v=1.0.0)
+github-release: ## Full release: bump version, build, tag, push, create GitHub release
 	@if [ -z "$(v)" ]; then \
-		echo "$(RED)Error: Version required. Usage: make github-release v=1.0.0$(NC)"; \
+		echo "$(RED)Error: Version required. Usage: make github-release v=1.2.0$(NC)"; \
 		exit 1; \
 	fi
-	@echo "$(BLUE)Creating GitHub release $(v)...$(NC)"
-	@git tag -a $(v) -m "Release $(v)" 2>/dev/null || echo "$(YELLOW)Tag $(v) already exists$(NC)"
-	@git push origin $(v) 2>/dev/null || echo "$(YELLOW)Tag $(v) already pushed$(NC)"
-	@gh release create $(v) \
-		$(BUILD_DIR)/$(APP_NAME)-$(VERSION).zip \
-		--title "$(APP_NAME) $(v)" \
+	@echo "$(BLUE)═══════════════════════════════════════════$(NC)"
+	@echo "$(BLUE)  Creating release v$(v)$(NC)"
+	@echo "$(BLUE)═══════════════════════════════════════════$(NC)"
+	@echo ""
+	@echo "$(BLUE)[1/6] Updating version to $(v)...$(NC)"
+	@sed -i '' 's/^VERSION = .*/VERSION = $(v)/' Makefile
+	@plutil -replace CFBundleVersion -string "$(v)" Resources/Info.plist
+	@plutil -replace CFBundleShortVersionString -string "$(v)" Resources/Info.plist
+	@echo "$(GREEN)✓ Version updated in Makefile and Info.plist$(NC)"
+	@echo ""
+	@echo "$(BLUE)[2/6] Building release...$(NC)"
+	@swift build -c release
+	@mkdir -p $(BUILD_DIR)/$(APP_NAME).app/Contents/MacOS
+	@mkdir -p $(BUILD_DIR)/$(APP_NAME).app/Contents/Resources
+	@cp .build/release/$(APP_NAME) $(BUILD_DIR)/$(APP_NAME).app/Contents/MacOS/
+	@cp Resources/Info.plist $(BUILD_DIR)/$(APP_NAME).app/Contents/Info.plist
+	@echo -n 'APPL????' > $(BUILD_DIR)/$(APP_NAME).app/Contents/PkgInfo
+	@echo "$(GREEN)✓ Built $(APP_NAME).app$(NC)"
+	@echo ""
+	@echo "$(BLUE)[3/6] Creating zip...$(NC)"
+	@cd $(BUILD_DIR) && zip -r $(APP_NAME)-$(v).zip $(APP_NAME).app
+	@echo "$(GREEN)✓ Created $(APP_NAME)-$(v).zip$(NC)"
+	@echo ""
+	@echo "$(BLUE)[4/6] Committing version bump...$(NC)"
+	@git add Makefile Resources/Info.plist
+	@git commit -m "Bump version to $(v)" 2>/dev/null || echo "$(YELLOW)Nothing to commit$(NC)"
+	@git push origin main 2>/dev/null || true
+	@echo "$(GREEN)✓ Committed and pushed$(NC)"
+	@echo ""
+	@echo "$(BLUE)[5/6] Creating git tag v$(v)...$(NC)"
+	@git tag -a v$(v) -m "Release $(v)" 2>/dev/null || echo "$(YELLOW)Tag already exists$(NC)"
+	@git push origin v$(v) 2>/dev/null || echo "$(YELLOW)Tag already pushed$(NC)"
+	@echo "$(GREEN)✓ Tag created$(NC)"
+	@echo ""
+	@echo "$(BLUE)[6/6] Creating GitHub release...$(NC)"
+	@gh release create v$(v) \
+		$(BUILD_DIR)/$(APP_NAME)-$(v).zip \
+		--title "$(APP_NAME) v$(v)" \
 		--notes-file CHANGELOG.md \
 		--latest
-	@echo "$(GREEN)✓ Release $(v) created!$(NC)"
-	@echo "$(BLUE)View at: https://github.com/egouda/macbook_tools/releases/tag/$(v)$(NC)"
+	@echo ""
+	@echo "$(GREEN)═══════════════════════════════════════════$(NC)"
+	@echo "$(GREEN)  ✓ Release v$(v) published!$(NC)"
+	@echo "$(GREEN)═══════════════════════════════════════════$(NC)"
+	@echo ""
+	@echo "View at: https://github.com/essamgouda97/macbook-tools/releases/tag/v$(v)"
