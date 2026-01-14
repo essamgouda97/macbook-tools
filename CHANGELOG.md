@@ -2,7 +2,38 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.0.0] - 2024-01-13
+## [1.1.0] - 2025-01-13
+
+### New Features
+
+- **Context-Aware Tool Selection**: Auto-selects the right tool based on source app
+  - Terminal/iTerm/Warp/VS Code/Xcode → Terminal Helper
+  - Safari/Chrome/Notes/Slack → Spelling & Grammar
+  - 30+ default app mappings included
+  - Fully customizable in Settings
+
+- **Paste and Return**: Press `⌘V` to close panel, return to previous app, and paste result automatically
+
+- **Settings UI Improvements**
+  - App mappings editor (add, remove, reset defaults)
+  - Visual permission status
+
+### Documentation
+
+- Comprehensive user guide (DOCS.md)
+- Installation guide for releases (INSTALLATION.md)
+- Developer documentation (README.md)
+- AI agent guidelines (CLAUDE.md)
+- GitHub issue templates
+
+### Developer Experience
+
+- `make github-release v=X.Y.Z` - one command to create GitHub release
+- `make reinstall` - rebuild + install + restart in one command
+
+---
+
+## [1.0.0] - 2025-01-12
 
 ### Features
 
