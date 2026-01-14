@@ -1,110 +1,138 @@
 # MacBook Tools
 
-A collection of productivity tools for macOS, built with Swift and SwiftUI.
+A collection of lightweight productivity tools for macOS, built with Swift and SwiftUI.
 
-## Tools
+**[User Documentation →](DOCS.md)** | **[AI Agent Guidelines →](CLAUDE.md)**
 
-### 🔤 FrancoTranslator
+## Current Tools
 
-Instantly translate Egyptian Franco-Arabic (Arabizi) to Arabic script.
+| Tool | Description | Trigger |
+|------|-------------|---------|
+| Franco → Arabic | Translates Egyptian Franco-Arabic to Arabic script | `⌘ + tap` |
+| Terminal Helper | Natural language to shell commands | `⌘ + tap` |
+| Spelling & Grammar | Fixes spelling and grammar errors | `⌘ + tap` |
 
-**Trigger:** `⌘ + double-click` anywhere, or customizable keyboard shortcut
-
-**Features:**
-- Floating panel appears at cursor
-- Type Franco → get Arabic → auto-copied to clipboard
-- Press `Esc` to close (or click outside, `Cmd+W`)
-- Customizable keyboard shortcut in Settings
-
-## Installation
-
-### Quick Install
+## Quick Start
 
 ```bash
+# Clone and install
 git clone https://github.com/egouda/macbook_tools.git
 cd macbook_tools
 make install
+
+# Run
+open /Applications/FrancoTranslator.app
 ```
 
-This builds and copies `FrancoTranslator.app` to `/Applications`.
+See [DOCS.md](DOCS.md) for usage instructions.
 
-### Start at Login
-
-1. Open **System Settings → General → Login Items**
-2. Click **+** under "Open at Login"
-3. Select **FrancoTranslator** from Applications
-
-## Usage
-
-1. **Open:** Hold `⌘` and double-click anywhere
-2. **Type:** Enter Franco-Arabic text (e.g., `ezayak`, `el7amdulellah`)
-3. **Translate:** Press `Enter`
-4. **Done:** Arabic appears and is auto-copied to clipboard
-5. **Close:** Press `Esc`
-
-### Franco-Arabic Reference
-
-| Franco | Arabic | Sound |
-|--------|--------|-------|
-| 2 | ء | glottal stop |
-| 3 | ع | ain |
-| 5 / kh | خ | kh |
-| 7 | ح | emphatic h |
-| 8 / gh | غ | gh |
-| 9 / q | ق | q |
-
-## Requirements
-
-- macOS 14.0+ (Sonoma)
-- OpenAI API key (set `OPENAI_API_KEY` env var or enter in Settings)
-- Accessibility permission (for global hotkeys)
-
-## Configuration
-
-### OpenAI API Key
-
-Option 1: Environment variable (recommended)
-```bash
-# Add to ~/.zshrc
-export OPENAI_API_KEY="sk-..."
-```
-
-Option 2: Via Settings
-- Click menu bar icon → Settings → Enter API key
-
-### Keyboard Shortcut
-
-Default backup shortcut: `⌃⌥T` (Ctrl+Option+T)
-
-Customize in Settings (menu bar → Settings).
+---
 
 ## Development
+
+### Requirements
+
+- macOS 14.0+ (Sonoma)
+- Xcode Command Line Tools
+- Swift 5.9+
+
+### Build Commands
 
 ```bash
 make help          # Show all commands
 make build         # Debug build
-make run           # Build and run
 make release       # Build .app bundle
 make install       # Install to /Applications
-make clean         # Clean build
+make dev           # Run from source (for testing)
+make reinstall     # Full rebuild + install + restart
+```
+
+### Development Workflow
+
+```bash
+# 1. Make changes
+# 2. Test
+make dev           # Runs from source, Ctrl+C to stop
+
+# 3. Ship
+make reinstall     # Rebuild, install, restart
+```
+
+### Project Structure
+
+```
+macbook_tools/
+├── Sources/
+│   ├── MacToolsCore/        # Shared library
+│   │   ├── Accessibility/   # Permission helpers
+│   │   ├── EventMonitoring/ # Hotkeys, gestures
+│   │   ├── UI/              # Floating panels
+│   │   └── Security/        # Keychain storage
+│   └── FrancoTranslator/    # Main app
+│       ├── Views/
+│       ├── ViewModels/
+│       ├── Models/
+│       └── Services/
+├── Scripts/                 # Build scripts
+├── DOCS.md                  # User documentation
+├── CLAUDE.md                # AI agent guidelines
+└── Makefile
 ```
 
 ### Adding New Tools
 
-See [AGENTS.md](AGENTS.md) for guidelines on adding new tools to this repo.
+See [CLAUDE.md](CLAUDE.md) for detailed guidelines on:
+- Creating new tool modules
+- Using MacToolsCore components
+- Code patterns and best practices
 
-## Project Structure
+---
 
+## Configuration
+
+### API Key
+
+```bash
+# Option 1: Environment variable (recommended)
+export OPENAI_API_KEY="sk-..."
+
+# Option 2: Via app Settings
+# Menu bar → Settings → Enter API key
 ```
-macbook_tools/
-├── Makefile                 # Build commands
-├── Package.swift            # SPM config
-├── Sources/
-│   ├── MacToolsCore/        # Shared library
-│   └── FrancoTranslator/    # First tool
-├── Scripts/                 # Build scripts
-└── build/                   # Output .app bundles
+
+### Accessibility Permission
+
+Required for global hotkey/gesture detection. Grant via:
+**System Settings → Privacy & Security → Accessibility**
+
+---
+
+## Release Process
+
+```bash
+# 1. Update version if needed
+# 2. Build release
+make release
+make zip
+
+# 3. Create git tag
+git tag v1.0.0
+git push origin v1.0.0
+
+# 4. Create GitHub release with zip
 ```
+
+---
+
+## Contributing
+
+1. Fork the repo
+2. Create a feature branch
+3. Make changes (follow [CLAUDE.md](CLAUDE.md) guidelines)
+4. Update [DOCS.md](DOCS.md) if user-facing
+5. Submit PR
+
+---
 
 ## License
 

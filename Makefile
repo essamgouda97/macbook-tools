@@ -1,4 +1,4 @@
-.PHONY: all build release install uninstall clean run test help dev stop restore status
+.PHONY: all build release install uninstall clean run test help dev stop restore status tag publish github-release
 
 # Configuration
 APP_NAME = FrancoTranslator
@@ -17,18 +17,23 @@ NC = \033[0m
 help: ## Show this help
 	@echo "MacBook Tools - Available commands:"
 	@echo ""
-	@echo "$(YELLOW)Development workflow:$(NC)"
-	@echo "  $(BLUE)make dev$(NC)         Test code changes (stops installed app, runs from source)"
+	@echo "$(YELLOW)Development:$(NC)"
+	@echo "  $(BLUE)make dev$(NC)         Test code changes (runs from source)"
 	@echo "  $(BLUE)make stop$(NC)        Stop the running app"
-	@echo "  $(BLUE)make restore$(NC)     Stop dev version, restart installed app"
-	@echo "  $(BLUE)make status$(NC)      Show which version is running"
+	@echo "  $(BLUE)make restore$(NC)     Restart installed app"
+	@echo "  $(BLUE)make reinstall$(NC)   Rebuild + install + restart"
+	@echo ""
+	@echo "$(YELLOW)Release:$(NC)"
+	@echo "  $(BLUE)make github-release v=X.Y.Z$(NC)  Create GitHub release (one command!)"
+	@echo "  $(BLUE)make publish$(NC)                 Build zip only"
 	@echo ""
 	@echo "$(YELLOW)All commands:$(NC)"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(BLUE)%-15s$(NC) %s\n", $$1, $$2}'
 	@echo ""
-	@echo "$(YELLOW)Typical workflows:$(NC)"
+	@echo "$(YELLOW)Workflows:$(NC)"
 	@echo "  Development:  make dev → test → make restore"
-	@echo "  Ship changes: make dev → test → make install → make restore"
+	@echo "  Ship changes: make reinstall"
+	@echo "  New release:  make publish → make tag v=1.0.0"
 	@echo ""
 
 all: build ## Build debug version
@@ -144,3 +149,52 @@ status: ## Show which version is running
 	fi
 
 reinstall: stop install restore ## Stop, rebuild, install, and restart
+
+# =============================================================================
+# Release Workflow
+# =============================================================================
+
+tag: ## Create and push a git tag (usage: make tag v=1.0.0)
+	@if [ -z "$(v)" ]; then \
+		echo "$(RED)Error: Version required. Usage: make tag v=1.0.0$(NC)"; \
+		exit 1; \
+	fi
+	@echo "$(BLUE)Creating tag $(v)...$(NC)"
+	@git tag -a $(v) -m "Release $(v)"
+	@git push origin $(v)
+	@echo "$(GREEN)✓ Tag $(v) created and pushed$(NC)"
+
+publish: zip ## Create release zip and show next steps
+	@echo ""
+	@echo "$(GREEN)✓ Release package ready!$(NC)"
+	@echo ""
+	@echo "$(YELLOW)Next steps:$(NC)"
+	@echo "  1. Create tag:    make tag v=$(VERSION)"
+	@echo "  2. Go to:         https://github.com/egouda/macbook_tools/releases/new"
+	@echo "  3. Select tag:    $(VERSION)"
+	@echo "  4. Upload:        $(BUILD_DIR)/$(APP_NAME)-$(VERSION).zip"
+	@echo "  5. Add release notes and publish"
+	@echo ""
+
+bump-version: ## Show how to bump version
+	@echo "$(YELLOW)To bump version:$(NC)"
+	@echo "  1. Edit VERSION in Makefile (currently $(VERSION))"
+	@echo "  2. Edit version in Resources/Info.plist"
+	@echo "  3. Run: make publish"
+	@echo ""
+
+github-release: zip ## Create GitHub release with zip (usage: make github-release v=1.0.0)
+	@if [ -z "$(v)" ]; then \
+		echo "$(RED)Error: Version required. Usage: make github-release v=1.0.0$(NC)"; \
+		exit 1; \
+	fi
+	@echo "$(BLUE)Creating GitHub release $(v)...$(NC)"
+	@git tag -a $(v) -m "Release $(v)" 2>/dev/null || echo "$(YELLOW)Tag $(v) already exists$(NC)"
+	@git push origin $(v) 2>/dev/null || echo "$(YELLOW)Tag $(v) already pushed$(NC)"
+	@gh release create $(v) \
+		$(BUILD_DIR)/$(APP_NAME)-$(VERSION).zip \
+		--title "$(APP_NAME) $(v)" \
+		--notes-file CHANGELOG.md \
+		--latest
+	@echo "$(GREEN)✓ Release $(v) created!$(NC)"
+	@echo "$(BLUE)View at: https://github.com/egouda/macbook_tools/releases/tag/$(v)$(NC)"
