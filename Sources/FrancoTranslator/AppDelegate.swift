@@ -59,6 +59,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let menu = NSMenu()
         menu.addItem(NSMenuItem(title: "Open (⌘+tap)", action: #selector(showAtCenter), keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
+        menu.addItem(NSMenuItem(title: "Check for Updates...", action: #selector(checkForUpdates), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ","))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(quit), keyEquivalent: "q"))
@@ -113,6 +114,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let screen = NSScreen.main else { return }
         let center = CGPoint(x: screen.frame.midX, y: screen.frame.midY)
         panelController?.showPanel(at: center)
+    }
+
+    @objc private func checkForUpdates() {
+        Task {
+            await UpdateService.shared.checkForUpdates()
+        }
     }
 
     @objc private func openSettings() {
