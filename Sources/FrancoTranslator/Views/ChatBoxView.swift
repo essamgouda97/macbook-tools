@@ -5,6 +5,7 @@ struct ChatBoxView: View {
     @ObservedObject var viewModel: TranslationViewModel
     @State private var inputText: String = ""
     @FocusState private var isInputFocused: Bool
+    var onPasteAndReturn: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -12,7 +13,7 @@ struct ChatBoxView: View {
             HStack {
                 // Tool picker
                 Picker("", selection: $viewModel.selectedTool) {
-                    ForEach(Tool.allTools) { tool in
+                    ForEach(Array(Tool.allTools.enumerated()), id: \.element.id) { index, tool in
                         Label(tool.name, systemImage: tool.icon)
                             .tag(tool)
                     }
@@ -23,10 +24,10 @@ struct ChatBoxView: View {
 
                 Spacer()
 
-                // Click hint
-                Text("⌘+\(viewModel.selectedTool.clickCount)×click")
-                    .font(.system(size: 10))
-                    .foregroundColor(.secondary.opacity(0.7))
+                // Tool shortcuts hint
+                Text("⌘1/2/3")
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundColor(.secondary.opacity(0.6))
 
                 Button(action: { NSApp.keyWindow?.close() }) {
                     Image(systemName: "xmark")
@@ -34,7 +35,6 @@ struct ChatBoxView: View {
                         .font(.system(size: 11, weight: .semibold))
                 }
                 .buttonStyle(.plain)
-                .keyboardShortcut(.escape, modifiers: [])
             }
 
             // Input field with dynamic placeholder
@@ -63,7 +63,6 @@ struct ChatBoxView: View {
                 .padding(.vertical, 4)
             } else if let output = viewModel.lastOutput {
                 VStack(alignment: .trailing, spacing: 8) {
-                    // Output - RTL for Arabic, LTR for others
                     ScrollView {
                         Text(output)
                             .font(.system(size: viewModel.selectedTool.id == "franco" ? 20 : 14, design: viewModel.selectedTool.id == "terminal" ? .monospaced : .default))
@@ -74,7 +73,6 @@ struct ChatBoxView: View {
                     }
                     .frame(maxHeight: 150)
 
-                    // Copy indicator
                     HStack(spacing: 6) {
                         if viewModel.justCopied {
                             Image(systemName: "checkmark")
@@ -110,7 +108,7 @@ struct ChatBoxView: View {
             Spacer(minLength: 0)
 
             // Hint
-            Text("⏎ run • ⎋ close • ⌘+2/3/4×click")
+            Text("⏎ run • ⎋ close • ⌘1/2/3 switch")
                 .font(.system(size: 10))
                 .foregroundColor(.secondary.opacity(0.6))
         }
@@ -121,6 +119,22 @@ struct ChatBoxView: View {
             RoundedRectangle(cornerRadius: 10)
                 .fill(Color(nsColor: .windowBackgroundColor))
         )
+        .background(KeyboardShortcutHandler(
+            onToolSelect: { index in
+                if index < Tool.allTools.count {
+                    viewModel.selectTool(Tool.allTools[index])
+                }
+            },
+            onNextTool: {
+                cycleToNextTool()
+            },
+            onEscape: {
+                NSApp.keyWindow?.close()
+            },
+            onPaste: {
+                onPasteAndReturn?()
+            }
+        ))
         .onAppear {
             isInputFocused = true
             inputText = ""
@@ -139,5 +153,85 @@ struct ChatBoxView: View {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
         viewModel.showCopied()
+    }
+
+    private func cycleToNextTool() {
+        guard let currentIndex = Tool.allTools.firstIndex(where: { $0.id == viewModel.selectedTool.id }) else { return }
+        let nextIndex = (currentIndex + 1) % Tool.allTools.count
+        viewModel.selectTool(Tool.allTools[nextIndex])
+    }
+}
+
+// MARK: - Keyboard Shortcut Handler
+
+struct KeyboardShortcutHandler: NSViewRepresentable {
+    let onToolSelect: (Int) -> Void
+    let onNextTool: () -> Void
+    let onEscape: () -> Void
+    let onPaste: () -> Void
+
+    func makeNSView(context: Context) -> KeyEventView {
+        let view = KeyEventView()
+        view.onToolSelect = onToolSelect
+        view.onNextTool = onNextTool
+        view.onEscape = onEscape
+        view.onPaste = onPaste
+        return view
+    }
+
+    func updateNSView(_ nsView: KeyEventView, context: Context) {
+        nsView.onToolSelect = onToolSelect
+        nsView.onNextTool = onNextTool
+        nsView.onEscape = onEscape
+        nsView.onPaste = onPaste
+    }
+
+    class KeyEventView: NSView {
+        var onToolSelect: ((Int) -> Void)?
+        var onNextTool: (() -> Void)?
+        var onEscape: (() -> Void)?
+        var onPaste: (() -> Void)?
+
+        override var acceptsFirstResponder: Bool { true }
+
+        override func performKeyEquivalent(with event: NSEvent) -> Bool {
+            // ⌘V for paste and return to previous app
+            if event.modifierFlags.contains(.command),
+               event.charactersIgnoringModifiers == "v" {
+                onPaste?()
+                return true
+            }
+
+            // ⌘1, ⌘2, ⌘3 for tool selection
+            if event.modifierFlags.contains(.command) {
+                switch event.charactersIgnoringModifiers {
+                case "1":
+                    onToolSelect?(0)
+                    return true
+                case "2":
+                    onToolSelect?(1)
+                    return true
+                case "3":
+                    onToolSelect?(2)
+                    return true
+                default:
+                    break
+                }
+            }
+
+            // Tab for cycling (without modifiers)
+            if event.keyCode == 48 && !event.modifierFlags.contains(.command) {
+                onNextTool?()
+                return true
+            }
+
+            // Escape
+            if event.keyCode == 53 {
+                onEscape?()
+                return true
+            }
+
+            return super.performKeyEquivalent(with: event)
+        }
     }
 }

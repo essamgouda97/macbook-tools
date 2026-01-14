@@ -63,11 +63,4 @@ final class TranslationViewModel: ObservableObject {
         selectedTool = tool
         reset()
     }
-
-    func selectTool(byClickCount clickCount: Int) {
-        if let tool = Tool.tool(forClickCount: clickCount) {
-            selectedTool = tool
-            reset()
-        }
-    }
 }

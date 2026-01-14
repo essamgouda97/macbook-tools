@@ -1,5 +1,10 @@
-import AppKit
+@preconcurrency import AppKit
 import SwiftUI
+
+/// Holds observer reference for paste notification
+private final class ObserverHolder: @unchecked Sendable {
+    var observer: NSObjectProtocol?
+}
 
 /// Controls the lifecycle of a floating panel.
 /// Handles positioning, showing, hiding, and toggle behavior.
@@ -8,6 +13,7 @@ public final class FloatingPanelController<Content: View> {
     private var panel: FloatingPanel<Content>?
     private let contentBuilder: () -> Content
     private let panelSize: CGSize
+    private var previousApp: NSRunningApplication?
 
     /// Whether the panel is currently visible
     public var isVisible: Bool {
@@ -33,6 +39,9 @@ public final class FloatingPanelController<Content: View> {
             return
         }
 
+        // Remember the app that was active before we show the panel
+        previousApp = NSWorkspace.shared.frontmostApplication
+
         let origin = calculatePanelOrigin(cursorLocation: location)
         let rect = NSRect(origin: origin, size: panelSize)
 
@@ -48,6 +57,67 @@ public final class FloatingPanelController<Content: View> {
     public func hidePanel() {
         panel?.closePanel()
         panel = nil
+    }
+
+    /// Closes panel, returns to previous app, and pastes clipboard content.
+    public func pasteAndReturn() {
+        guard let app = previousApp else {
+            hidePanel()
+            return
+        }
+
+        // Close panel first
+        hidePanel()
+
+        // Listen for when the app actually becomes active, then paste
+        let targetPID = app.processIdentifier
+        let holder = ObserverHolder()
+
+        holder.observer = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { notification in
+            // Remove observer immediately
+            if let obs = holder.observer {
+                NSWorkspace.shared.notificationCenter.removeObserver(obs)
+                holder.observer = nil
+            }
+
+            // Verify it's the app we wanted
+            if let activatedApp = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+               activatedApp.processIdentifier == targetPID {
+                // App is now active - paste immediately
+                Task { @MainActor in
+                    Self.simulatePasteWithAppleScript()
+                }
+            }
+        }
+
+        // Activate the app
+        app.activate()
+
+        // Fallback: remove observer after timeout if activation never happened
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            if let obs = holder.observer {
+                NSWorkspace.shared.notificationCenter.removeObserver(obs)
+                holder.observer = nil
+            }
+        }
+    }
+
+    /// Simulates Cmd+V using AppleScript (more reliable on modern macOS)
+    private static func simulatePasteWithAppleScript() {
+        let script = """
+        tell application "System Events"
+            keystroke "v" using command down
+        end tell
+        """
+
+        if let appleScript = NSAppleScript(source: script) {
+            var error: NSDictionary?
+            appleScript.executeAndReturnError(&error)
+        }
     }
 
     /// Calculates panel origin, clamping to screen bounds.

@@ -7,7 +7,6 @@ public struct Tool: Identifiable, Hashable {
     public let icon: String
     public let placeholder: String
     public let systemPrompt: String
-    public let clickCount: Int  // Cmd + N clicks to trigger
     public let contextLoader: (() async -> String?)?
 
     public init(
@@ -16,7 +15,6 @@ public struct Tool: Identifiable, Hashable {
         icon: String,
         placeholder: String,
         systemPrompt: String,
-        clickCount: Int,
         contextLoader: (() async -> String?)? = nil
     ) {
         self.id = id
@@ -24,7 +22,6 @@ public struct Tool: Identifiable, Hashable {
         self.icon = icon
         self.placeholder = placeholder
         self.systemPrompt = systemPrompt
-        self.clickCount = clickCount
         self.contextLoader = contextLoader
     }
 
@@ -41,7 +38,7 @@ public struct Tool: Identifiable, Hashable {
 // MARK: - Tool Definitions
 
 extension Tool {
-    /// Franco → Arabic translator (Cmd + 2 clicks)
+    /// Franco → Arabic translator (⌘1)
     public static let francoTranslator = Tool(
         id: "franco",
         name: "Franco → Arabic",
@@ -72,11 +69,10 @@ extension Tool {
         2. Use Egyptian Arabic dialect, not Modern Standard Arabic
         3. Preserve the meaning and tone
         4. Do not add explanations or notes
-        """,
-        clickCount: 2
+        """
     )
 
-    /// Terminal command helper (Cmd + 3 clicks)
+    /// Terminal command helper (⌘2)
     public static let terminalHelper = Tool(
         id: "terminal",
         name: "Terminal",
@@ -95,14 +91,13 @@ extension Tool {
         4. Use the user's aliases when they match the intent
         5. Do not add backticks, code blocks, or formatting
         """,
-        clickCount: 3,
         contextLoader: {
             let zshrcPath = NSString("~/.zshrc").expandingTildeInPath
             return try? String(contentsOfFile: zshrcPath, encoding: .utf8)
         }
     )
 
-    /// Spelling & grammar fixer (Cmd + 4 clicks)
+    /// Spelling & grammar fixer (⌘3)
     public static let spellFixer = Tool(
         id: "spell",
         name: "Fix Spelling",
@@ -118,21 +113,15 @@ extension Tool {
         4. Respond ONLY with the corrected text
         5. If the text has no errors, return it unchanged
         6. Do not add explanations or notes
-        """,
-        clickCount: 4
+        """
     )
 
-    /// All available tools
+    /// All available tools (order matters for ⌘1/2/3)
     public static let allTools: [Tool] = [
-        .francoTranslator,
-        .terminalHelper,
-        .spellFixer
+        .francoTranslator,  // ⌘1
+        .terminalHelper,    // ⌘2
+        .spellFixer         // ⌘3
     ]
-
-    /// Find tool by click count
-    public static func tool(forClickCount count: Int) -> Tool? {
-        allTools.first { $0.clickCount == count }
-    }
 
     /// Find tool by ID
     public static func tool(forID id: String) -> Tool? {

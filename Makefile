@@ -44,18 +44,7 @@ release: ## Build release .app bundle
 	@mkdir -p $(BUILD_DIR)/$(APP_NAME).app/Contents/MacOS
 	@mkdir -p $(BUILD_DIR)/$(APP_NAME).app/Contents/Resources
 	@cp .build/release/$(APP_NAME) $(BUILD_DIR)/$(APP_NAME).app/Contents/MacOS/
-	@echo '<?xml version="1.0" encoding="UTF-8"?>' > $(BUILD_DIR)/$(APP_NAME).app/Contents/Info.plist
-	@echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> $(BUILD_DIR)/$(APP_NAME).app/Contents/Info.plist
-	@echo '<plist version="1.0"><dict>' >> $(BUILD_DIR)/$(APP_NAME).app/Contents/Info.plist
-	@echo '<key>CFBundleExecutable</key><string>$(APP_NAME)</string>' >> $(BUILD_DIR)/$(APP_NAME).app/Contents/Info.plist
-	@echo '<key>CFBundleIdentifier</key><string>$(BUNDLE_ID)</string>' >> $(BUILD_DIR)/$(APP_NAME).app/Contents/Info.plist
-	@echo '<key>CFBundleName</key><string>$(APP_NAME)</string>' >> $(BUILD_DIR)/$(APP_NAME).app/Contents/Info.plist
-	@echo '<key>CFBundleVersion</key><string>$(VERSION)</string>' >> $(BUILD_DIR)/$(APP_NAME).app/Contents/Info.plist
-	@echo '<key>CFBundleShortVersionString</key><string>$(VERSION)</string>' >> $(BUILD_DIR)/$(APP_NAME).app/Contents/Info.plist
-	@echo '<key>LSMinimumSystemVersion</key><string>14.0</string>' >> $(BUILD_DIR)/$(APP_NAME).app/Contents/Info.plist
-	@echo '<key>LSUIElement</key><true/>' >> $(BUILD_DIR)/$(APP_NAME).app/Contents/Info.plist
-	@echo '<key>NSHighResolutionCapable</key><true/>' >> $(BUILD_DIR)/$(APP_NAME).app/Contents/Info.plist
-	@echo '</dict></plist>' >> $(BUILD_DIR)/$(APP_NAME).app/Contents/Info.plist
+	@cp Resources/Info.plist $(BUILD_DIR)/$(APP_NAME).app/Contents/Info.plist
 	@echo -n 'APPL????' > $(BUILD_DIR)/$(APP_NAME).app/Contents/PkgInfo
 	@echo "$(GREEN)✓ Built $(BUILD_DIR)/$(APP_NAME).app$(NC)"
 
