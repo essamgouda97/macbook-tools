@@ -1,4 +1,4 @@
-# MacBook Tools
+# AI Mac Tools
 
 A collection of lightweight productivity tools for macOS, built with Swift and SwiftUI.
 

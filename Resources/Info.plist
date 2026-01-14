@@ -3,19 +3,19 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDisplayName</key>
-	<string>MacBook Tools</string>
+	<string>AI Mac Tools</string>
 	<key>CFBundleExecutable</key>
-	<string>FrancoTranslator</string>
+	<string>AIMacTools</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.macbooktools.francotranslator</string>
+	<string>com.aimactools.app</string>
 	<key>CFBundleName</key>
-	<string>FrancoTranslator</string>
+	<string>AI Mac Tools</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.2.0</string>
+	<string>1.0.0</string>
 	<key>CFBundleVersion</key>
-	<string>1.2.0</string>
+	<string>1.0.0</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>14.0</string>
 	<key>LSUIElement</key>

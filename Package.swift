@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "MacBookTools",
+    name: "AIMacTools",
     platforms: [
         .macOS(.v14)
     ],
@@ -12,8 +12,8 @@ let package = Package(
             targets: ["MacToolsCore"]
         ),
         .executable(
-            name: "FrancoTranslator",
-            targets: ["FrancoTranslator"]
+            name: "AIMacTools",
+            targets: ["AIMacTools"]
         )
     ],
     dependencies: [
@@ -29,16 +29,12 @@ let package = Package(
             ]
         ),
         .executableTarget(
-            name: "FrancoTranslator",
+            name: "AIMacTools",
             dependencies: ["MacToolsCore"]
         ),
         .testTarget(
             name: "MacToolsCoreTests",
             dependencies: ["MacToolsCore"]
-        ),
-        .testTarget(
-            name: "FrancoTranslatorTests",
-            dependencies: ["FrancoTranslator", "MacToolsCore"]
         )
     ]
 )

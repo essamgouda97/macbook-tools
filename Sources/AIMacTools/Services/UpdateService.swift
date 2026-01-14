@@ -134,7 +134,7 @@ final class UpdateService {
     private func showNoUpdatesDialog() {
         let alert = NSAlert()
         alert.messageText = "You're Up to Date"
-        alert.informativeText = "MacBook Tools \(currentVersion) is the latest version."
+        alert.informativeText = "AI Mac Tools \(currentVersion) is the latest version."
         alert.alertStyle = .informational
         alert.addButton(withTitle: "OK")
         alert.runModal()

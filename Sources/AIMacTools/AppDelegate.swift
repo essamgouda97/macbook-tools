@@ -33,11 +33,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func showOnboardingIfNeeded() {
         guard OnboardingManager.shared.shouldShowOnboarding else { return }
 
+        // Only prompt for accessibility on first launch (onboarding)
+        AccessibilityManager.requestPermission()
+
         let onboardingView = OnboardingView(tapToClickEnabled: TrackpadSettings.isTapToClickEnabled)
         let hostingController = NSHostingController(rootView: onboardingView)
         let window = NSWindow(contentViewController: hostingController)
         window.styleMask = [.titled, .closable]
-        window.title = "Welcome to MacBook Tools"
+        window.title = "Welcome to AI Mac Tools"
         window.center()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
@@ -49,7 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
         if let button = statusItem.button {
-            if let image = NSImage(systemSymbolName: "hammer", accessibilityDescription: "MacBook Tools") {
+            if let image = NSImage(systemSymbolName: "hammer", accessibilityDescription: "AI Mac Tools") {
                 button.image = image
             } else {
                 button.title = "Tools"
@@ -68,8 +71,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func checkAccessibilityAndStart() {
-        // Request permission - macOS shows its standard dialog if needed
-        AccessibilityManager.requestPermission()
+        // Don't prompt - just start monitoring
+        // Permission prompt only happens during onboarding (first launch)
+        // If permission missing, hotkey/tap won't work but app won't annoy user
         startMonitoring()
     }
 

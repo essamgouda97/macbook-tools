@@ -1,9 +1,9 @@
 .PHONY: all build release install uninstall clean run test help dev stop restore status tag publish github-release
 
 # Configuration
-APP_NAME = FrancoTranslator
-BUNDLE_ID = com.macbooktools.francotranslator
-VERSION = 1.2.0
+APP_NAME = AIMacTools
+BUNDLE_ID = com.aimactools.app
+VERSION = 1.0.0
 BUILD_DIR = build
 INSTALL_DIR = /Applications
 
@@ -15,7 +15,7 @@ RED = \033[0;31m
 NC = \033[0m
 
 help: ## Show this help
-	@echo "MacBook Tools - Available commands:"
+	@echo "AI Mac Tools - Available commands:"
 	@echo ""
 	@echo "$(YELLOW)Development:$(NC)"
 	@echo "  $(BLUE)make dev$(NC)         Test code changes (runs from source)"

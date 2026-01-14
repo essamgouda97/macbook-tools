@@ -8,7 +8,7 @@ public final class KeychainManager {
     private let keychain: Keychain
 
     private init() {
-        keychain = Keychain(service: "com.macbooktools")
+        keychain = Keychain(service: "com.aimactools")
             .accessibility(.whenUnlocked)
             .synchronizable(false)
     }

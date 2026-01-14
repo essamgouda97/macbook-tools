@@ -10,10 +10,16 @@ public struct AccessibilityManager {
     }
 
     /// Requests Accessibility permission using Apple's standard system dialog.
-    /// Shows the native macOS prompt if permission not yet granted.
+    /// Only shows the prompt if permission is not already granted.
     /// - Returns: Whether permission is currently granted
     @discardableResult
     public static func requestPermission() -> Bool {
+        // First check without prompting
+        if AXIsProcessTrusted() {
+            return true
+        }
+
+        // Only prompt if not already granted
         let options: NSDictionary = [
             kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true
         ]

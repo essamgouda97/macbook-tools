@@ -1,4 +1,4 @@
-# MacBook Tools - User Guide
+# AI Mac Tools - User Guide
 
 A lightweight productivity toolbox for macOS. Hold `⌘` and tap anywhere to open a floating panel with AI-powered tools.
 
