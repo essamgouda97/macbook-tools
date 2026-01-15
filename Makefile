@@ -101,14 +101,17 @@ dmg: release ## Create DMG for distribution
 # =============================================================================
 
 dev: ## Test changes: stop app, build, run from source
-	@echo "$(BLUE)Stopping any running instance...$(NC)"
-	@-pkill -x $(APP_NAME) 2>/dev/null || true
-	@sleep 0.5
+	@echo "$(BLUE)Stopping ALL instances...$(NC)"
+	@-pkill -9 -x $(APP_NAME) 2>/dev/null || true
+	@-pkill -9 -f "$(INSTALL_DIR)/$(APP_NAME).app" 2>/dev/null || true
+	@-pkill -9 -f ".build.*$(APP_NAME)" 2>/dev/null || true
+	@sleep 1
 	@echo "$(BLUE)Building and running from source...$(NC)"
 	@swift build
 	@echo "$(GREEN)✓ Starting dev version...$(NC)"
 	@echo "$(YELLOW)Press Ctrl+C to stop, then 'make restore' to return to installed app$(NC)"
 	@echo ""
+	@-pkill -9 -x $(APP_NAME) 2>/dev/null || true
 	@swift run $(APP_NAME)
 
 stop: ## Stop the running app (any version)

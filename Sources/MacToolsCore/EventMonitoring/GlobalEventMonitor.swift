@@ -41,7 +41,6 @@ public final class GlobalEventMonitor {
 /// Works with trackpad taps (if "Tap to click" enabled) or mouse clicks
 public final class CmdDoubleTapMonitor {
     private var globalMonitor: Any?
-    private var localMonitor: Any?
     private let onTrigger: (CGPoint) -> Void
     private var triggered = false
 
@@ -50,32 +49,28 @@ public final class CmdDoubleTapMonitor {
     }
 
     public func start() {
-        let mask: NSEvent.EventTypeMask = [.leftMouseDown]
-
-        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: mask) { [weak self] event in
+        // Only global monitor - catches Cmd+click from all apps including ours
+        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
             self?.handleEvent(event)
-        }
-
-        localMonitor = NSEvent.addLocalMonitorForEvents(matching: mask) { [weak self] event in
-            self?.handleEvent(event)
-            return event
         }
     }
 
     private func handleEvent(_ event: NSEvent) {
-        guard event.modifierFlags.contains(.command),
-              !triggered else { return }
+        // Only check modifier on event thread (safe, immutable)
+        guard event.modifierFlags.contains(.command) else { return }
 
-        triggered = true
         let location = NSEvent.mouseLocation
 
+        // Move ALL flag access to main thread to avoid race condition
         DispatchQueue.main.async { [weak self] in
-            self?.onTrigger(location)
-        }
+            guard let self = self, !self.triggered else { return }
+            self.triggered = true
+            self.onTrigger(location)
 
-        // Debounce
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-            self?.triggered = false
+            // Debounce
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                self?.triggered = false
+            }
         }
     }
 
@@ -83,10 +78,6 @@ public final class CmdDoubleTapMonitor {
         if let monitor = globalMonitor {
             NSEvent.removeMonitor(monitor)
             globalMonitor = nil
-        }
-        if let monitor = localMonitor {
-            NSEvent.removeMonitor(monitor)
-            localMonitor = nil
         }
     }
 

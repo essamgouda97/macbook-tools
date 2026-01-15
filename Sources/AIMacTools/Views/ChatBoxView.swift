@@ -6,6 +6,7 @@ struct ChatBoxView: View {
     @State private var inputText: String = ""
     @FocusState private var isInputFocused: Bool
     var onPasteAndReturn: (() -> Void)?
+    var onEscape: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -128,17 +129,36 @@ struct ChatBoxView: View {
             onNextTool: {
                 cycleToNextTool()
             },
-            onEscape: {
-                NSApp.keyWindow?.close()
+            onEscape: { [onEscape] in
+                if let onEscape = onEscape {
+                    onEscape()
+                } else {
+                    NSApp.keyWindow?.close()
+                }
             },
             onPaste: {
                 onPasteAndReturn?()
             }
         ))
         .onAppear {
-            isInputFocused = true
             inputText = ""
             viewModel.reset()
+            // Multiple focus attempts
+            for delay in [0.05, 0.1, 0.2, 0.3] {
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                    isInputFocused = true
+                }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .init("FocusTextField"))) { _ in
+            isInputFocused = true
+        }
+        .onExitCommand {
+            if let onEscape = onEscape {
+                onEscape()
+            } else {
+                NSApp.keyWindow?.close()
+            }
         }
     }
 

@@ -11,6 +11,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let viewModel = TranslationViewModel()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Single instance check - quit if another instance is running
+        if isAnotherInstanceRunning() {
+            NSApp.terminate(nil)
+            return
+        }
+
         // Hide dock icon - menu bar only
         NSApp.setActivationPolicy(.accessory)
 
@@ -83,16 +89,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 viewModel: self?.viewModel ?? TranslationViewModel(),
                 onPasteAndReturn: { [weak self] in
                     self?.panelController?.pasteAndReturn()
+                },
+                onEscape: { [weak self] in
+                    self?.panelController?.hidePanel()
                 }
             )
         }
 
         // Primary: Cmd + tap opens at cursor
         doubleTapMonitor = CmdDoubleTapMonitor { [weak self] location in
-            DispatchQueue.main.async {
-                self?.autoSelectToolForCurrentApp()
-                self?.panelController?.showPanel(at: location)
-            }
+            // No DispatchQueue.main.async here - CmdDoubleTapMonitor already dispatches to main
+            self?.autoSelectToolForCurrentApp()
+            self?.panelController?.showPanel(at: location)
         }
         doubleTapMonitor?.start()
 
@@ -139,5 +147,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         doubleTapMonitor?.stop()
         hotkeyMonitor?.stop()
         panelController?.hidePanel()
+    }
+
+    /// Kill any other instances of this app
+    private func isAnotherInstanceRunning() -> Bool {
+        let myPID = ProcessInfo.processInfo.processIdentifier
+
+        for app in NSWorkspace.shared.runningApplications {
+            guard app.processIdentifier != myPID else { continue }
+
+            // Match by name OR by executable path containing AIMacTools
+            let isMatch = app.localizedName == "AIMacTools" ||
+                          app.executableURL?.path.contains("AIMacTools") == true
+
+            if isMatch {
+                kill(app.processIdentifier, SIGKILL)
+            }
+        }
+
+        usleep(200_000)  // 200ms for cleanup
+        return false
     }
 }
