@@ -124,20 +124,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotkeyMonitor?.start()
     }
 
-    /// Send Cmd+C to copy current selection (runs before we take focus)
+    /// Copy current selection using CGEvent with hidden state (ignores held keys)
     private static func copySelection() {
-        let source = CGEventSource(stateID: .combinedSessionState)
+        // Use .hidSystemState to create events independent of current keyboard state
+        // This works even when Cmd is physically held from Cmd+tap
+        let source = CGEventSource(stateID: .hidSystemState)
 
         // Cmd+C down
         if let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 0x08, keyDown: true) {
             keyDown.flags = .maskCommand
-            keyDown.post(tap: .cghidEventTap)
+            keyDown.post(tap: .cgSessionEventTap)
         }
+
+        usleep(10000) // 10ms
 
         // Cmd+C up
         if let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 0x08, keyDown: false) {
             keyUp.flags = .maskCommand
-            keyUp.post(tap: .cghidEventTap)
+            keyUp.post(tap: .cgSessionEventTap)
         }
     }
 
