@@ -157,7 +157,7 @@ final class UpdateService {
         // Show progress
         let alert = NSAlert()
         alert.messageText = "Downloading Update..."
-        alert.informativeText = "Please wait while the update is downloaded."
+        alert.informativeText = "Please wait while the update is downloaded and installed."
         alert.alertStyle = .informational
         alert.addButton(withTitle: "Cancel")
 
@@ -166,48 +166,94 @@ final class UpdateService {
         progressIndicator.startAnimation(nil)
         alert.accessoryView = progressIndicator
 
+        var downloadTask: Task<Void, Never>?
+
         // Start download in background
-        Task {
+        downloadTask = Task {
             do {
                 let (tempURL, _) = try await URLSession.shared.download(from: url)
 
                 // Close progress dialog
                 NSApp.stopModal()
 
-                // Move to Downloads and unzip
-                let downloadsURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!
-                let zipURL = downloadsURL.appendingPathComponent("FrancoTranslator-update.zip")
-
-                try? FileManager.default.removeItem(at: zipURL)
-                try FileManager.default.moveItem(at: tempURL, to: zipURL)
-
-                // Show success and open Downloads
-                showDownloadCompleteDialog(zipPath: zipURL.path)
+                // Auto-install the update
+                try await autoInstall(zipURL: tempURL)
 
             } catch {
                 NSApp.stopModal()
-                showErrorDialog(error: error)
+                if !Task.isCancelled {
+                    showErrorDialog(error: error)
+                }
             }
         }
 
         // Run modal (will be stopped when download completes)
         let response = alert.runModal()
         if response == .alertFirstButtonReturn {
-            // User cancelled - task will complete but we ignore
+            // User cancelled
+            downloadTask?.cancel()
         }
     }
 
-    private func showDownloadCompleteDialog(zipPath: String) {
-        let alert = NSAlert()
-        alert.messageText = "Download Complete"
-        alert.informativeText = "The update has been downloaded to your Downloads folder.\n\nTo install:\n1. Quit this app\n2. Unzip the downloaded file\n3. Move the new app to Applications (replace existing)"
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "Open Downloads")
-        alert.addButton(withTitle: "OK")
+    private func autoInstall(zipURL: URL) async throws {
+        let fileManager = FileManager.default
+        let tempDir = fileManager.temporaryDirectory.appendingPathComponent(UUID().uuidString)
 
-        let response = alert.runModal()
-        if response == .alertFirstButtonReturn {
-            NSWorkspace.shared.selectFile(zipPath, inFileViewerRootedAtPath: "")
+        // Create temp directory
+        try fileManager.createDirectory(at: tempDir, withIntermediateDirectories: true)
+
+        // Unzip using ditto (preserves permissions and code signing)
+        let unzipProcess = Process()
+        unzipProcess.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
+        unzipProcess.arguments = ["-xk", zipURL.path, tempDir.path]
+        try unzipProcess.run()
+        unzipProcess.waitUntilExit()
+
+        guard unzipProcess.terminationStatus == 0 else {
+            throw NSError(domain: "UpdateService", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to unzip update"])
+        }
+
+        // Find the .app in the extracted contents
+        let contents = try fileManager.contentsOfDirectory(at: tempDir, includingPropertiesForKeys: nil)
+        guard let appURL = contents.first(where: { $0.pathExtension == "app" }) else {
+            throw NSError(domain: "UpdateService", code: 2, userInfo: [NSLocalizedDescriptionKey: "No app found in update"])
+        }
+
+        // Get current app location
+        let currentAppURL = Bundle.main.bundleURL
+        let appName = currentAppURL.lastPathComponent
+        let installDir = currentAppURL.deletingLastPathComponent()
+        let targetURL = installDir.appendingPathComponent(appName)
+
+        // Create install script that runs after we quit
+        let scriptContent = """
+        #!/bin/bash
+        sleep 1
+        rm -rf "\(targetURL.path)"
+        cp -R "\(appURL.path)" "\(targetURL.path)"
+        open "\(targetURL.path)"
+        rm -rf "\(tempDir.path)"
+        """
+
+        let scriptURL = tempDir.appendingPathComponent("install.sh")
+        try scriptContent.write(to: scriptURL, atomically: true, encoding: .utf8)
+
+        // Make script executable
+        let chmodProcess = Process()
+        chmodProcess.executableURL = URL(fileURLWithPath: "/bin/chmod")
+        chmodProcess.arguments = ["+x", scriptURL.path]
+        try chmodProcess.run()
+        chmodProcess.waitUntilExit()
+
+        // Run install script in background and quit
+        let installProcess = Process()
+        installProcess.executableURL = URL(fileURLWithPath: "/bin/bash")
+        installProcess.arguments = [scriptURL.path]
+        try installProcess.run()
+
+        // Quit the app to allow replacement
+        DispatchQueue.main.async {
+            NSApp.terminate(nil)
         }
     }
 }
