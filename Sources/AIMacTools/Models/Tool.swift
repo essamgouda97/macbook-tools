@@ -43,7 +43,7 @@ extension Tool {
         id: "franco",
         name: "Franco → Arabic",
         icon: "character.bubble",
-        placeholder: "Type Franco Arabic...",
+        placeholder: "Type or Enter for clipboard...",
         systemPrompt: """
         You are a translator that converts Egyptian Franco-Arabic (Arabizi) to Egyptian Arabic.
 

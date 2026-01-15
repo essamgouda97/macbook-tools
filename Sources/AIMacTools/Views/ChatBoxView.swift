@@ -122,10 +122,28 @@ struct ChatBoxView: View {
 
     private func process() {
         guard !viewModel.isLoading else { return }
-        // Rewriter allows empty input (defaults to fix spelling)
-        // Other tools require input
-        if inputText.isEmpty && viewModel.selectedTool.id != "rewrite" { return }
-        Task { await viewModel.process(input: inputText.isEmpty ? "fix spelling and grammar" : inputText) }
+
+        let toolId = viewModel.selectedTool.id
+        let clipboard = NSPasteboard.general.string(forType: .string) ?? ""
+
+        // Determine input based on tool type
+        let finalInput: String
+        switch toolId {
+        case "franco":
+            // Empty → use clipboard; typed → use typed text only
+            finalInput = inputText.isEmpty ? clipboard : inputText
+        case "rewrite":
+            // Empty → fix spelling instruction; typed → custom instruction
+            // (clipboard is added as context in LLMService)
+            finalInput = inputText.isEmpty ? "fix spelling and grammar" : inputText
+        default:
+            // Other tools require typed input
+            if inputText.isEmpty { return }
+            finalInput = inputText
+        }
+
+        guard !finalInput.isEmpty else { return }
+        Task { await viewModel.process(input: finalInput) }
     }
 
     private func copyToClipboard(_ text: String) {

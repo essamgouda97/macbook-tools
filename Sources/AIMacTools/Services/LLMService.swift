@@ -71,8 +71,12 @@ final class LLMService {
         }
 
         // Build user message with optional clipboard context
+        // Franco doesn't need clipboard context (it's either the input already, or should be ignored)
         var userMessage = input
-        if let clipboardText = getClipboardText(), !clipboardText.isEmpty, clipboardText != input {
+        if tool.id != "franco",
+           let clipboardText = getClipboardText(),
+           !clipboardText.isEmpty,
+           clipboardText != input {
             userMessage = """
             \(input)
 
