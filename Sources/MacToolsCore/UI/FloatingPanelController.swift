@@ -19,6 +19,9 @@ public final class FloatingPanelController<Content: View> {
             previousApp = currentApp
         }
 
+        // Tell PanelManager which app we came from (for auto-exit on app switch)
+        PanelManager.shared.setSourceApp(bundleID: previousApp?.bundleIdentifier)
+
         PanelManager.shared.show(
             at: location,
             size: panelSize,
@@ -33,30 +36,34 @@ public final class FloatingPanelController<Content: View> {
 
     public func pasteAndReturn() {
         guard let app = previousApp else { hidePanel(); return }
-        let pid = app.processIdentifier
+
+        // Get the text to paste from clipboard
+        guard let text = NSPasteboard.general.string(forType: .string) else {
+            hidePanel()
+            return
+        }
 
         hidePanel()
-
-        // Activate the app
         app.activate()
 
-        // Wait for app to be frontmost, then paste
+        // Type the text directly (avoids bracketed paste mode in Terminal)
         DispatchQueue.global(qos: .userInteractive).asyncAfter(deadline: .now() + 0.15) {
-            let source = CGEventSource(stateID: .combinedSessionState)
+            Self.typeText(text)
+        }
+    }
 
-            // Cmd+V down
-            if let vDown = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: true) {
-                vDown.flags = .maskCommand
-                vDown.post(tap: .cghidEventTap)
+    /// Type text character by character using CGEvent (avoids bracketed paste)
+    private nonisolated static func typeText(_ text: String) {
+        let source = CGEventSource(stateID: .combinedSessionState)
+
+        for char in text {
+            let str = String(char)
+            if let event = CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: true) {
+                var buffer = [UniChar](str.utf16)
+                event.keyboardSetUnicodeString(stringLength: buffer.count, unicodeString: &buffer)
+                event.post(tap: .cghidEventTap)
             }
-
-            usleep(20000) // 20ms
-
-            // Cmd+V up
-            if let vUp = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: false) {
-                vUp.flags = .maskCommand
-                vUp.post(tap: .cghidEventTap)
-            }
+            usleep(500) // 0.5ms between characters for reliability
         }
     }
 }

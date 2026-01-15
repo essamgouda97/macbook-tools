@@ -85,8 +85,9 @@ extension Tool {
         Use their defined aliases and functions when appropriate.
 
         Rules:
-        1. Respond ONLY with the command(s), no explanation
-        2. Use one command per line if multiple commands are needed
+        1. Respond ONLY with the command, no explanation
+        2. ALWAYS output a SINGLE one-liner - chain multiple operations with && (dependent) or ; (independent)
+           Example: mkdir project && cd project && git init
         3. Prefer simple, safe commands
         4. Use the user's aliases when they match the intent
         5. Do not add backticks, code blocks, or formatting

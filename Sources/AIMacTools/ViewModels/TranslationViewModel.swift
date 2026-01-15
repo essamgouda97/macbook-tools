@@ -13,6 +13,7 @@ final class TranslationViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var error: String?
     @Published var justCopied = false
+    @Published var initialInput: String = ""
 
     private let llmService: LLMService
 

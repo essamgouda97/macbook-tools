@@ -1,6 +1,7 @@
 import Foundation
 import OpenAI
 import MacToolsCore
+import AppKit
 
 enum LLMError: LocalizedError {
     case noAPIKey
@@ -37,6 +38,16 @@ enum LLMError: LocalizedError {
 
 final class LLMService {
 
+    /// Get current clipboard text (truncated if too long)
+    private func getClipboardText() -> String? {
+        guard let text = NSPasteboard.general.string(forType: .string) else { return nil }
+        // Truncate to ~500 chars to avoid bloating the prompt
+        if text.count > 500 {
+            return String(text.prefix(500)) + "..."
+        }
+        return text
+    }
+
     /// Process input using the specified tool
     func process(input: String, tool: Tool) async throws -> String {
         // Try env var first, then Keychain
@@ -59,9 +70,21 @@ final class LLMService {
             }
         }
 
+        // Build user message with optional clipboard context
+        var userMessage = input
+        if let clipboardText = getClipboardText(), !clipboardText.isEmpty, clipboardText != input {
+            userMessage = """
+            \(input)
+
+            ---
+            [Clipboard content - may or may not be relevant to the task above]:
+            \(clipboardText)
+            """
+        }
+
         let messages: [ChatQuery.ChatCompletionMessageParam] = [
             .init(role: .system, content: systemPrompt)!,
-            .init(role: .user, content: input)!
+            .init(role: .user, content: userMessage)!
         ]
 
         let query = ChatQuery(

@@ -9,116 +9,58 @@ struct ChatBoxView: View {
     var onEscape: (() -> Void)?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Header with tool selector
-            HStack {
-                // Tool picker
-                Picker("", selection: $viewModel.selectedTool) {
-                    ForEach(Array(Tool.allTools.enumerated()), id: \.element.id) { index, tool in
-                        Label(tool.name, systemImage: tool.icon)
-                            .tag(tool)
-                    }
-                }
-                .pickerStyle(.menu)
-                .labelsHidden()
-                .fixedSize()
-
-                Spacer()
-
-                // Tool shortcuts hint
-                Text("⌘1/2/3")
-                    .font(.system(size: 10, design: .monospaced))
-                    .foregroundColor(.secondary.opacity(0.6))
-
-                Button(action: { NSApp.keyWindow?.close() }) {
-                    Image(systemName: "xmark")
-                        .foregroundColor(.secondary)
-                        .font(.system(size: 11, weight: .semibold))
-                }
-                .buttonStyle(.plain)
+        VStack(alignment: .leading, spacing: 8) {
+            // Minimal header - just tool pill
+            HStack(spacing: 6) {
+                Image(systemName: viewModel.selectedTool.icon)
+                    .font(.system(size: 11, weight: .medium))
+                Text(viewModel.selectedTool.name)
+                    .font(.system(size: 11, weight: .medium))
             }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Capsule().fill(Color.accentColor.opacity(0.15)))
+            .foregroundColor(.accentColor)
+            .onTapGesture { cycleToNextTool() }
 
-            // Input field with dynamic placeholder
+            // Input field
             TextField(viewModel.selectedTool.placeholder, text: $inputText)
                 .textFieldStyle(.plain)
-                .font(.system(size: 15))
+                .font(.system(size: 14))
                 .focused($isInputFocused)
                 .padding(10)
                 .background(
                     RoundedRectangle(cornerRadius: 8)
                         .fill(Color(nsColor: .textBackgroundColor))
                 )
-                .onSubmit {
-                    process()
-                }
+                .onSubmit { process() }
 
-            // Output area
+            // Output area - compact
             if viewModel.isLoading {
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     ProgressView()
-                        .scaleEffect(0.7)
-                    Text("Processing...")
-                        .font(.system(size: 13))
+                        .scaleEffect(0.6)
+                    Text("...")
+                        .font(.system(size: 12))
                         .foregroundColor(.secondary)
                 }
-                .padding(.vertical, 4)
+                .padding(.vertical, 2)
             } else if let output = viewModel.lastOutput {
-                VStack(alignment: .trailing, spacing: 8) {
-                    ScrollView {
-                        Text(output)
-                            .font(.system(size: viewModel.selectedTool.id == "franco" ? 20 : 14, design: viewModel.selectedTool.id == "terminal" ? .monospaced : .default))
-                            .multilineTextAlignment(viewModel.selectedTool.id == "franco" ? .trailing : .leading)
-                            .environment(\.layoutDirection, viewModel.selectedTool.id == "franco" ? .rightToLeft : .leftToRight)
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: viewModel.selectedTool.id == "franco" ? .trailing : .leading)
-                    }
-                    .frame(maxHeight: 150)
-
-                    HStack(spacing: 6) {
-                        if viewModel.justCopied {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(.green)
-                            Text("Copied!")
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(.green)
-                        }
-
-                        Spacer()
-
-                        Button(action: { copyToClipboard(output) }) {
-                            Image(systemName: "doc.on.doc")
-                                .font(.system(size: 12))
-                                .foregroundColor(.accentColor)
-                        }
-                        .buttonStyle(.plain)
-                        .help("Copy again")
-                    }
-                }
-                .padding(12)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color(nsColor: .controlBackgroundColor))
-                )
+                outputView(output)
             } else if let error = viewModel.error {
                 Text(error)
-                    .font(.system(size: 12))
+                    .font(.system(size: 11))
                     .foregroundColor(.red)
+                    .lineLimit(2)
             }
-
-            Spacer(minLength: 0)
-
-            // Hint
-            Text("⏎ run • ⎋ close • ⌘1/2/3 switch")
-                .font(.system(size: 10))
-                .foregroundColor(.secondary.opacity(0.6))
         }
-        .padding(14)
-        .frame(width: 400)
+        .padding(12)
+        .frame(width: 320)
         .fixedSize(horizontal: false, vertical: true)
         .background(
             RoundedRectangle(cornerRadius: 10)
                 .fill(Color(nsColor: .windowBackgroundColor))
+                .shadow(color: .black.opacity(0.2), radius: 12, y: 4)
         )
         .background(KeyboardShortcutHandler(
             onToolSelect: { index in
@@ -126,47 +68,61 @@ struct ChatBoxView: View {
                     viewModel.selectTool(Tool.allTools[index])
                 }
             },
-            onNextTool: {
-                cycleToNextTool()
-            },
-            onEscape: { [onEscape] in
-                if let onEscape = onEscape {
-                    onEscape()
-                } else {
-                    NSApp.keyWindow?.close()
-                }
-            },
-            onPaste: {
-                onPasteAndReturn?()
-            }
+            onNextTool: { cycleToNextTool() },
+            onEscape: { onEscape?() ?? NSApp.keyWindow?.close() },
+            onPaste: { onPasteAndReturn?() }
         ))
         .onAppear {
             inputText = ""
             viewModel.reset()
-            // Multiple focus attempts
-            for delay in [0.05, 0.1, 0.2, 0.3] {
-                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                    isInputFocused = true
-                }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                isInputFocused = true
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .init("FocusTextField"))) { _ in
             isInputFocused = true
         }
-        .onExitCommand {
-            if let onEscape = onEscape {
-                onEscape()
-            } else {
-                NSApp.keyWindow?.close()
+    }
+
+    @ViewBuilder
+    private func outputView(_ output: String) -> some View {
+        VStack(alignment: .trailing, spacing: 4) {
+            ScrollView {
+                Text(output)
+                    .font(.system(size: viewModel.selectedTool.id == "franco" ? 18 : 13,
+                                  design: viewModel.selectedTool.id == "terminal" ? .monospaced : .default))
+                    .multilineTextAlignment(viewModel.selectedTool.id == "franco" ? .trailing : .leading)
+                    .environment(\.layoutDirection, viewModel.selectedTool.id == "franco" ? .rightToLeft : .leftToRight)
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: viewModel.selectedTool.id == "franco" ? .trailing : .leading)
+            }
+            .frame(maxHeight: 120)
+
+            HStack(spacing: 4) {
+                if viewModel.justCopied {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 10))
+                        .foregroundColor(.green)
+                }
+                Spacer()
+                Button(action: { copyToClipboard(output) }) {
+                    Image(systemName: "doc.on.doc")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
             }
         }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color(nsColor: .controlBackgroundColor))
+        )
     }
 
     private func process() {
         guard !inputText.isEmpty, !viewModel.isLoading else { return }
-        Task {
-            await viewModel.process(input: inputText)
-        }
+        Task { await viewModel.process(input: inputText) }
     }
 
     private func copyToClipboard(_ text: String) {
@@ -215,42 +171,23 @@ struct KeyboardShortcutHandler: NSViewRepresentable {
         override var acceptsFirstResponder: Bool { true }
 
         override func performKeyEquivalent(with event: NSEvent) -> Bool {
-            // ⌘V for paste and return to previous app
-            if event.modifierFlags.contains(.command),
-               event.charactersIgnoringModifiers == "v" {
-                onPaste?()
-                return true
-            }
-
-            // ⌘1, ⌘2, ⌘3 for tool selection
             if event.modifierFlags.contains(.command) {
                 switch event.charactersIgnoringModifiers {
-                case "1":
-                    onToolSelect?(0)
-                    return true
-                case "2":
-                    onToolSelect?(1)
-                    return true
-                case "3":
-                    onToolSelect?(2)
-                    return true
-                default:
-                    break
+                case "v": onPaste?(); return true
+                case "1": onToolSelect?(0); return true
+                case "2": onToolSelect?(1); return true
+                case "3": onToolSelect?(2); return true
+                default: break
                 }
             }
-
-            // Tab for cycling (without modifiers)
             if event.keyCode == 48 && !event.modifierFlags.contains(.command) {
                 onNextTool?()
                 return true
             }
-
-            // Escape
             if event.keyCode == 53 {
                 onEscape?()
                 return true
             }
-
             return super.performKeyEquivalent(with: event)
         }
     }

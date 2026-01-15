@@ -92,7 +92,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func startMonitoring() {
-        panelController = FloatingPanelController(size: CGSize(width: 400, height: 300)) { [weak self] in
+        panelController = FloatingPanelController(size: CGSize(width: 320, height: 200)) { [weak self] in
             ChatBoxView(
                 viewModel: self?.viewModel ?? TranslationViewModel(),
                 onPasteAndReturn: { [weak self] in
@@ -106,7 +106,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Primary: Cmd + tap opens at cursor
         doubleTapMonitor = CmdDoubleTapMonitor { [weak self] location in
-            // No DispatchQueue.main.async here - CmdDoubleTapMonitor already dispatches to main
             self?.autoSelectToolForCurrentApp()
             self?.panelController?.showPanel(at: location)
         }
