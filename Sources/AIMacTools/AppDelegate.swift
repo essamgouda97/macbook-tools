@@ -106,8 +106,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Primary: Cmd + tap opens at cursor
         doubleTapMonitor = CmdDoubleTapMonitor { [weak self] location in
-            self?.autoSelectToolForCurrentApp()
-            self?.panelController?.showPanel(at: location)
+            // Copy any selected text BEFORE we steal focus
+            Self.copySelection()
+
+            // Small delay for clipboard to update, then show panel
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                self?.autoSelectToolForCurrentApp()
+                self?.panelController?.showPanel(at: location)
+            }
         }
         doubleTapMonitor?.start()
 
@@ -116,6 +122,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.showAtCenter()
         }
         hotkeyMonitor?.start()
+    }
+
+    /// Send Cmd+C to copy current selection (runs before we take focus)
+    private static func copySelection() {
+        let source = CGEventSource(stateID: .combinedSessionState)
+
+        // Cmd+C down
+        if let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 0x08, keyDown: true) {
+            keyDown.flags = .maskCommand
+            keyDown.post(tap: .cghidEventTap)
+        }
+
+        // Cmd+C up
+        if let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 0x08, keyDown: false) {
+            keyUp.flags = .maskCommand
+            keyUp.post(tap: .cghidEventTap)
+        }
     }
 
     /// Auto-select the appropriate tool based on the frontmost app
