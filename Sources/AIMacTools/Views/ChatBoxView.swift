@@ -121,8 +121,11 @@ struct ChatBoxView: View {
     }
 
     private func process() {
-        guard !inputText.isEmpty, !viewModel.isLoading else { return }
-        Task { await viewModel.process(input: inputText) }
+        guard !viewModel.isLoading else { return }
+        // Rewriter allows empty input (defaults to fix spelling)
+        // Other tools require input
+        if inputText.isEmpty && viewModel.selectedTool.id != "rewrite" { return }
+        Task { await viewModel.process(input: inputText.isEmpty ? "fix spelling and grammar" : inputText) }
     }
 
     private func copyToClipboard(_ text: String) {

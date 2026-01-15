@@ -98,22 +98,32 @@ extension Tool {
         }
     )
 
-    /// Spelling & grammar fixer (⌘3)
-    public static let spellFixer = Tool(
-        id: "spell",
-        name: "Fix Spelling",
-        icon: "textformat.abc",
-        placeholder: "Paste text to fix...",
+    /// Rewrite tool (⌘3)
+    public static let rewriter = Tool(
+        id: "rewrite",
+        name: "Rewrite",
+        icon: "pencil.line",
+        placeholder: "How to rewrite? (or Enter to fix spelling)",
         systemPrompt: """
-        Fix spelling and grammar errors in the text.
+        You rewrite text based on the user's instructions.
+
+        The user's clipboard content is the TEXT TO REWRITE.
+        The user's prompt is the INSTRUCTION for how to rewrite it.
+
+        If the instruction is empty or just asks to "fix", fix spelling and grammar only.
+
+        Examples of instructions:
+        - "make it formal" → rewrite in formal tone
+        - "shorter" → condense while keeping meaning
+        - "as bullet points" → convert to bullet list
+        - "" (empty) → just fix spelling/grammar
+        - "fix" → just fix spelling/grammar
 
         Rules:
-        1. Keep the original meaning, tone, and style
-        2. Don't rewrite or improve the text - only fix errors
-        3. Preserve formatting (newlines, paragraphs, etc.)
-        4. Respond ONLY with the corrected text
-        5. If the text has no errors, return it unchanged
-        6. Do not add explanations or notes
+        1. Apply the instruction to the clipboard text
+        2. Respond ONLY with the rewritten text
+        3. Preserve the original meaning unless instructed otherwise
+        4. Do not add explanations or notes
         """
     )
 
@@ -121,7 +131,7 @@ extension Tool {
     public static let allTools: [Tool] = [
         .francoTranslator,  // ⌘1
         .terminalHelper,    // ⌘2
-        .spellFixer         // ⌘3
+        .rewriter           // ⌘3
     ]
 
     /// Find tool by ID
