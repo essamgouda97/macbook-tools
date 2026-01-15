@@ -3,7 +3,7 @@
 # Configuration
 APP_NAME = AIMacTools
 BUNDLE_ID = com.aimactools.app
-VERSION = 1.0.0
+VERSION = 1.0.1
 BUILD_DIR = build
 INSTALL_DIR = /Applications
 
