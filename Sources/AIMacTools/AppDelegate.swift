@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var hotkeyMonitor: GlobalHotkeyMonitor?
     private var panelController: FloatingPanelController<ChatBoxView>?
     private let viewModel = TranslationViewModel()
+    private var settingsWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Single instance check - quit if another instance is running
@@ -66,12 +67,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "Open (⌘+tap)", action: #selector(showAtCenter), keyEquivalent: ""))
+        let openItem = NSMenuItem(title: "", action: #selector(showAtCenter), keyEquivalent: "")
+        let openTitle = NSMutableAttributedString(string: "Open ")
+        openTitle.append(NSAttributedString(
+            string: "(⌘+tap)",
+            attributes: [.foregroundColor: NSColor.secondaryLabelColor]
+        ))
+        openItem.attributedTitle = openTitle
+        menu.addItem(openItem)
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Check for Updates...", action: #selector(checkForUpdates), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ","))
+        menu.addItem(NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "Quit", action: #selector(quit), keyEquivalent: "q"))
+        menu.addItem(NSMenuItem(title: "Quit", action: #selector(quit), keyEquivalent: ""))
 
         statusItem.menu = menu
     }
@@ -135,7 +143,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func openSettings() {
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        if settingsWindow == nil {
+            let settingsView = SettingsView()
+            let hostingController = NSHostingController(rootView: settingsView)
+            let window = NSWindow(contentViewController: hostingController)
+            window.title = "Settings"
+            window.styleMask = [.titled, .closable]
+            window.center()
+            settingsWindow = window
+        }
+
+        settingsWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
 

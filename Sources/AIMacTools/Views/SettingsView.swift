@@ -7,8 +7,6 @@ struct SettingsView: View {
     @State private var showingKey: Bool = false
     @State private var saveStatus: SaveStatus = .idle
     @State private var hasExistingKey: Bool = false
-    @State private var currentHotkey: Hotkey = HotkeyStorage.shared.hotkey
-    @State private var isRecording: Bool = false
 
     // App Mappings
     @State private var mappings: [AppToolMapping] = []
@@ -79,34 +77,6 @@ struct SettingsView: View {
                             .foregroundColor(.secondary)
                         }
                     }
-                }
-            }
-
-            // Hotkey Section
-            Section {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Keyboard Shortcut")
-                        .font(.headline)
-
-                    HStack {
-                        HotkeyRecorderView(
-                            hotkey: $currentHotkey,
-                            isRecording: $isRecording
-                        )
-
-                        if currentHotkey != .defaultHotkey {
-                            Button("Reset") {
-                                HotkeyStorage.shared.reset()
-                                currentHotkey = .defaultHotkey
-                                NotificationCenter.default.post(name: .hotkeyChanged, object: nil)
-                            }
-                            .buttonStyle(.borderless)
-                        }
-                    }
-
-                    Text("Click the box and press your desired shortcut")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
                 }
             }
 
@@ -199,7 +169,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 420, height: 560)
+        .frame(width: 420, height: 480)
         .onAppear {
             loadExistingKey()
             loadMappings()
@@ -409,87 +379,6 @@ struct AddAppSheet: View {
                 !existingBundleIDs.contains(app.bundleIdentifier!)
             }
             .sorted { ($0.localizedName ?? "") < ($1.localizedName ?? "") }
-    }
-}
-
-// MARK: - Hotkey Recorder
-
-struct HotkeyRecorderView: View {
-    @Binding var hotkey: Hotkey
-    @Binding var isRecording: Bool
-
-    var body: some View {
-        Button(action: { isRecording = true }) {
-            Text(isRecording ? "Press shortcut..." : hotkey.displayString)
-                .font(.system(size: 14, weight: .medium, design: .monospaced))
-                .frame(minWidth: 120)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(isRecording ? Color.accentColor.opacity(0.2) : Color(nsColor: .controlBackgroundColor))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(isRecording ? Color.accentColor : Color.gray.opacity(0.3), lineWidth: 1)
-                )
-        }
-        .buttonStyle(.plain)
-        .background(
-            HotkeyRecorderHelper(isRecording: $isRecording, onRecord: { newHotkey in
-                hotkey = newHotkey
-                HotkeyStorage.shared.hotkey = newHotkey
-                NotificationCenter.default.post(name: .hotkeyChanged, object: nil)
-            })
-        )
-    }
-}
-
-struct HotkeyRecorderHelper: NSViewRepresentable {
-    @Binding var isRecording: Bool
-    let onRecord: (Hotkey) -> Void
-
-    func makeNSView(context: Context) -> NSView {
-        let view = RecorderView()
-        view.onRecord = onRecord
-        view.onStopRecording = { isRecording = false }
-        return view
-    }
-
-    func updateNSView(_ nsView: NSView, context: Context) {
-        if let view = nsView as? RecorderView {
-            if isRecording {
-                view.window?.makeFirstResponder(view)
-            }
-        }
-    }
-
-    class RecorderView: NSView {
-        var onRecord: ((Hotkey) -> Void)?
-        var onStopRecording: (() -> Void)?
-
-        override var acceptsFirstResponder: Bool { true }
-
-        override func keyDown(with event: NSEvent) {
-            // Convert NSEvent modifiers to Carbon modifiers
-            var carbonMods: UInt32 = 0
-            if event.modifierFlags.contains(.control) { carbonMods |= UInt32(controlKey) }
-            if event.modifierFlags.contains(.option) { carbonMods |= UInt32(optionKey) }
-            if event.modifierFlags.contains(.shift) { carbonMods |= UInt32(shiftKey) }
-            if event.modifierFlags.contains(.command) { carbonMods |= UInt32(cmdKey) }
-
-            // Require at least one modifier
-            guard carbonMods != 0 else { return }
-
-            let hotkey = Hotkey(keyCode: UInt32(event.keyCode), modifiers: carbonMods)
-            onRecord?(hotkey)
-            onStopRecording?()
-        }
-
-        override func resignFirstResponder() -> Bool {
-            onStopRecording?()
-            return super.resignFirstResponder()
-        }
     }
 }
 
