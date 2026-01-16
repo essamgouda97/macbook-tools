@@ -72,11 +72,15 @@ final class LLMService {
     /// Process input using the specified tool
     func process(input: String, tool: Tool) async throws -> String {
         // Try: 1) env var, 2) Keychain, 3) ~/.zshrc
-        let apiKey = ProcessInfo.processInfo.environment["OPENAI_API_KEY"]
-            ?? KeychainManager.shared.getOpenAIKey()
-            ?? getAPIKeyFromZshrc()
+        // Use helper to skip empty strings in the chain
+        func nonEmpty(_ s: String?) -> String? {
+            guard let s = s, !s.isEmpty else { return nil }
+            return s
+        }
 
-        guard let apiKey = apiKey, !apiKey.isEmpty else {
+        guard let apiKey = nonEmpty(ProcessInfo.processInfo.environment["OPENAI_API_KEY"])
+                ?? nonEmpty(KeychainManager.shared.getOpenAIKey())
+                ?? nonEmpty(getAPIKeyFromZshrc()) else {
             throw LLMError.noAPIKey
         }
 
