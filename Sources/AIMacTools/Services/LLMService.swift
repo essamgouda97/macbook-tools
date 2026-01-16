@@ -48,11 +48,33 @@ final class LLMService {
         return text
     }
 
+    /// Read OPENAI_API_KEY from ~/.zshrc (GUI apps don't inherit shell env vars)
+    private func getAPIKeyFromZshrc() -> String? {
+        let zshrcPath = NSString("~/.zshrc").expandingTildeInPath
+        guard let content = try? String(contentsOfFile: zshrcPath, encoding: .utf8) else { return nil }
+
+        // Look for: export OPENAI_API_KEY="..." or export OPENAI_API_KEY='...' or export OPENAI_API_KEY=...
+        let patterns = [
+            "export\\s+OPENAI_API_KEY\\s*=\\s*[\"']([^\"']+)[\"']",  // quoted
+            "export\\s+OPENAI_API_KEY\\s*=\\s*([^\\s#]+)"            // unquoted
+        ]
+
+        for pattern in patterns {
+            if let regex = try? NSRegularExpression(pattern: pattern),
+               let match = regex.firstMatch(in: content, range: NSRange(content.startIndex..., in: content)),
+               let range = Range(match.range(at: 1), in: content) {
+                return String(content[range])
+            }
+        }
+        return nil
+    }
+
     /// Process input using the specified tool
     func process(input: String, tool: Tool) async throws -> String {
-        // Try env var first, then Keychain
+        // Try: 1) env var, 2) Keychain, 3) ~/.zshrc
         let apiKey = ProcessInfo.processInfo.environment["OPENAI_API_KEY"]
             ?? KeychainManager.shared.getOpenAIKey()
+            ?? getAPIKeyFromZshrc()
 
         guard let apiKey = apiKey, !apiKey.isEmpty else {
             throw LLMError.noAPIKey
